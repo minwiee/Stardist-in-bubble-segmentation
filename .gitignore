@@ -1,0 +1,7 @@
+*
+!.gitignore
+!CodeRepo/
+!CodeRepo/**
+CodeRepo/UNet/**
+CodeRepo/Models/**
+**/*.zip
