@@ -20,7 +20,8 @@ class VisualizationViewModel:
         self.control_mode = tk.StringVar(value="Normal") # Normal, Zoom, Pan
         self.show_result = tk.BooleanVar(value=True)
         self.show_mask = tk.BooleanVar(value=False)
-        self.show_original = tk.BooleanVar(value=True)
+        self.show_original = tk.BooleanVar(value=True) # Keeping for backward compat logic if needed, but UI will bind to js_reco
+
         
         # Data Cache
         self.current_image_idx = -1
@@ -74,7 +75,11 @@ class VisualizationViewModel:
 
     @property
     def bubble_list(self):
-        return self.current_data['bubble_list_rdc']
+        # Return different list based on control_mode
+        if self.control_mode.get() == 'SD':
+            return self.get_sd_bubbles()
+        else:
+            return self.current_data['bubble_list_rdc']
         
 
         
@@ -193,11 +198,19 @@ class VisualizationViewModel:
                 
         return items
 
+
+
     def toggle_view(self):
+        # Update bubble list to match current mode
+        if self.on_bubble_list_update:
+            self.on_bubble_list_update()
         if self.on_view_update:
             self.on_view_update()
             
     def set_control_mode(self, mode):
         self.control_mode.set(mode)
+        # Refresh bubble list to show data for selected mode
+        if self.on_bubble_list_update:
+            self.on_bubble_list_update()
         if self.on_control_mode_update:
             self.on_control_mode_update()

@@ -45,13 +45,13 @@ class BubbleStepper:
                 self.current_idx -= 1
                 self.ax.figure.canvas.draw_idle()
 
-    def show_all(self, event=None):
+    def show_all(self, event=None, **kwargs):
         starting_idx = self.current_idx
         # Draw all remaining items
         for i in range(starting_idx + 1, len(self.visual_items)):
             self.current_idx = i
             item = self.visual_items[i]
-            self.draw_item(item)
+            self.draw_item(item, **kwargs)
         self.ax.figure.canvas.draw_idle()
 
     def clear_all(self, event=None):
@@ -80,14 +80,14 @@ class BubbleStepper:
         new_artists = []
         base_zorder = zorder_override if zorder_override else 1
         
-        if item['type'] == 'rdc':
+        if item['type'] in ['rdc', 'rdc_js']:
             points = item['points']
             color = color_override if color_override else item['color']
             a, b = list(points[:, 1]), list(points[:, 0])
             a += a[:1]
             b += b[:1]
             
-            lines = self.ax.plot(a, b, '-', alpha=1, zorder=base_zorder, color=color, linewidth=1.5 * linewidth_scale)
+            lines = self.ax.plot(a, b, '-', alpha=1, zorder=base_zorder, color=color, linewidth=1.5 * linewidth_scale, clip_on=False)
             new_artists.extend(lines)
             
             if draw_rays and 'center' in item:
@@ -98,7 +98,20 @@ class BubbleStepper:
                 dist_lines[:, 0, 1] = points[:, 0]
                 dist_lines[:, 1, 0] = center[1]
                 dist_lines[:, 1, 1] = center[0]
-                lc = LineCollection(dist_lines, colors=color, linewidths=0.6 * linewidth_scale, alpha=0.7, zorder=base_zorder)
+                
+                # Determine colors for rays
+                if 'collisions' in item:
+                    # Collision coloring: 0 -> Green/Base, 1,2 -> Red
+                    coll_data = item['collisions']
+                    # Ensure coll_data length matches num_rays
+                    if len(coll_data) == num_rays:
+                        ray_colors = ['red' if c > 0 else 'lime' for c in coll_data]
+                    else:
+                        ray_colors = color
+                else:
+                    ray_colors = color
+
+                lc = LineCollection(dist_lines, colors=ray_colors, linewidths=0.6 * linewidth_scale, alpha=0.7, zorder=base_zorder)
                 self.ax.add_collection(lc)
                 new_artists.append(lc)
                 
@@ -135,7 +148,7 @@ class BubbleStepper:
             is_hit = False
             area = float('inf')
             
-            if item['type'] == 'rdc':
+            if item['type'] in ['rdc', 'rdc_js']:
                 points = item['points']
                 center = item.get('center', None)
                 if center is None:
@@ -213,7 +226,7 @@ class BubbleStepper:
         self.detail_fig = fig
         if self.background_img is not None:
             ax.imshow(self.background_img, cmap='gray')
-        if item['type'] == 'rdc':
+        if item['type'] in ['rdc', 'rdc_js']:
             points = item['points']
             color = item['color']
             center = item.get('center', None)

@@ -104,9 +104,9 @@ class VisualizationView(ttk.Frame):
         
         fr_viz_opts = ttk.Frame(fr_viz_container)
         fr_viz_opts.pack(fill=tk.X)
-        ttk.Checkbutton(fr_viz_opts, text="SD & RDC", variable=self.vm.show_result, command=self.vm.toggle_view).pack(side=tk.LEFT, padx=5)
+        ttk.Checkbutton(fr_viz_opts, text="SD + RDC", variable=self.vm.show_result, command=self.vm.toggle_view).pack(side=tk.LEFT, padx=5)
+
         ttk.Checkbutton(fr_viz_opts, text="StarDist", variable=self.vm.show_mask, command=self.vm.toggle_view).pack(side=tk.LEFT, padx=5)
-        ttk.Checkbutton(fr_viz_opts, text="Original", variable=self.vm.show_original, command=self.vm.toggle_view).pack(side=tk.LEFT, padx=5)
         
         self.comp_plots = PlotsPanel(fr_viz_container, self.vm, self.comp_controls)
         self.comp_plots.pack(fill=tk.BOTH, expand=True)

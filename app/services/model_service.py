@@ -6,6 +6,8 @@ from stardist.models import StarDist2D
 from csbdeep.utils import normalize
 from app.utils.starbub import HiddenReco
 
+from app.utils.json_collision import resolve_collisions
+
 class ModelService:
     def __init__(self):
         self.modelSD = None
@@ -73,6 +75,9 @@ class ModelService:
         X = normalize(x if x.ndim == 2 else x[..., 0], 1, 99.8, axis=(0, 1))
         
         labels, details = self.modelSD.predict_instances(X, verbose=False)
-        Bubbles = HiddenReco(labels, metric, useRDC=True, model=self.modelRDC, boolPlot=False)
+        
+
+        # ----------------------------------------
+        Bubbles = HiddenReco(labels, metric, model=self.modelRDC)
         
         return labels, details, Bubbles, img_name

@@ -46,8 +46,11 @@ class ControlPanel(ttk.Frame):
         fr_target = ttk.LabelFrame(self, text="Control Target")
         fr_target.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
         
-        ttk.Radiobutton(fr_target, text="SD & RDC", variable=self.vm.control_mode, value="RDC", command=lambda: self.vm.set_control_mode("RDC")).pack(side=tk.LEFT, expand=True)
-        ttk.Radiobutton(fr_target, text="StarDist", variable=self.vm.control_mode, value="SD", command=lambda: self.vm.set_control_mode("SD")).pack(side=tk.LEFT, expand=True)
+        fr_row1 = ttk.Frame(fr_target)
+        fr_row1.pack(fill=tk.X)
+        ttk.Radiobutton(fr_row1, text="SD + RDC", variable=self.vm.control_mode, value="RDC", command=lambda: self.vm.set_control_mode("RDC")).pack(side=tk.LEFT, expand=True)
+        ttk.Radiobutton(fr_row1, text="StarDist", variable=self.vm.control_mode, value="SD", command=lambda: self.vm.set_control_mode("SD")).pack(side=tk.LEFT, expand=True)
+
 
     def update_states(self, has_stepper):
          state = tk.NORMAL if has_stepper else tk.DISABLED

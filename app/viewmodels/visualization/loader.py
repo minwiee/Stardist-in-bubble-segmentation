@@ -19,8 +19,7 @@ class DataLoader:
         
         img_path = os.path.join(root_path, 'imgs', img_filename)
         mask_path = os.path.join(root_path, 'SDmask', f"{name_no_ext}.png") 
-        csv_path = os.path.join(root_path, 'results', name_no_ext, f"{name_no_ext}_pixel.csv")
-        csv_mm_path = os.path.join(root_path, 'results', name_no_ext, f"{name_no_ext}_mm.csv")
+        csv_path = os.path.join(root_path, 'csv', f"{name_no_ext}.csv")  # Changed: csv/{img}.csv
         json_path = os.path.join(root_path, 'JSMask', f"{name_no_ext}.json")
         
         data = {
@@ -34,7 +33,9 @@ class DataLoader:
         try:
             # 1. Load Original
             if os.path.exists(img_path):
-                data['original_img'] = np.array(Image.open(img_path).convert('L'))
+                #data['original_img'] = np.array(Image.open(img_path).convert('L'))
+                data['original_img'] = np.array(Image.open(img_path))
+
                 
             # 2. Load Mask
             if os.path.exists(mask_path):
@@ -48,38 +49,25 @@ class DataLoader:
                 except Exception as e:
                     print(f"Error loading JSON: {e}")
             
-            # 4. Load CSVs (RDC List)
-            # Use mm csv for list details
-            if os.path.exists(csv_mm_path):
+            # 4. Load Bubble List from Pixel CSV (now includes Area_mm)
+            if os.path.exists(csv_path):
                 try:
-                    with open(csv_mm_path, 'r') as f:
+                    with open(csv_path, 'r') as f:
                         reader = csv.DictReader(f)
                         for row in reader:
                             data['bubble_list_rdc'].append({
                                 'stt': row.get('STT'),
                                 'cx': row.get('Center_X'),
                                 'cy': row.get('Center_Y'),
-                                'area_mm': row.get('Area'),
-                                'pixels': "N/A"
+                                'area_px': row.get('Area_px', row.get('Area', 0)),  # Backward compat
+                                'area_mm': row.get('Area_mm', 0),
                             })
                 except Exception as e:
-                     print(f"Error reading MM CSV: {e}")
-                     
-            # Decorate with Pixel Area if available
-            if os.path.exists(csv_path):
-                 try:
-                     with open(csv_path, 'r') as f:
-                        reader = csv.DictReader(f)
-                        for i, row in enumerate(reader):
-                            if i < len(data['bubble_list_rdc']):
-                                data['bubble_list_rdc'][i]['area_px'] = row.get('Area')
-                 except Exception as e:
-                      print(f"Error reading Pixel CSV: {e}")
+                    print(f"Error reading Pixel CSV: {e}")
             
-            # 5. Visualizer Items
+            # 5. Visualizer Items (Hybrid: Type=0 uses JSON, Type=1 uses rays)
             if os.path.exists(csv_path):
-                # We assume Visualizer util handles this correctly
-                data['result_items'] = Visualizer.get_visual_items(img_path, csv_path)
+                data['result_items'] = Visualizer.get_visual_items(img_path, csv_path, json_path)
                 
         except Exception as e:
             print(f"Error loading image data: {e}")
@@ -92,6 +80,6 @@ class DataLoader:
         try:
             with open(path, 'r') as f:
                 lines = f.readlines()
-            return [line.strip() for line in lines if line.strip()]
+            return [line.split(',')[0].strip() for line in lines if line.strip()]
         except:
             return []

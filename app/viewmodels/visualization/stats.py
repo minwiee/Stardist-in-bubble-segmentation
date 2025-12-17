@@ -99,7 +99,8 @@ class StatsCalculator:
                     area_px = StatsCalculator._polygon_area(poly[:, 1], poly[:, 0])
             
             total_sd_px += area_px
-            area_mm = area_px * ratio_factor
+            # ratio_factor is for length, area needs ratio_factor²
+            area_mm = area_px * (ratio_factor ** 2)
             
             bubble_list.append({
                 'stt': i + 1,
@@ -113,9 +114,9 @@ class StatsCalculator:
         stats['area_px'] = f"{total_sd_px:.0f}"
         
         if ratio_factor > 0:
-            total_sd_mm = total_sd_px * ratio_factor
+            total_sd_mm = total_sd_px * (ratio_factor ** 2)
             stats['area_mm'] = f"{total_sd_mm:.2f}"
-            sd_r_mm = (total_sd_mm / (img_area_px * ratio_factor)) * 100
+            sd_r_mm = (total_sd_mm / (img_area_px * (ratio_factor ** 2))) * 100
             stats['ratio'] = f"{sd_r_mm:.2f} %"
             
         return stats

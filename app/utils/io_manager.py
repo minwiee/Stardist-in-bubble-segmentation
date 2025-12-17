@@ -31,16 +31,14 @@ class IOManager:
         # to avoid double nesting like .../imgs/imgs
         if os.path.basename(parent_dir) == 'imgs':
             # Already in imgs. 
-            # Results should go to sibling 'results'.
+            # Results should go to sibling folders in root_context.
             root_context = os.path.dirname(parent_dir)
-            imgs_dir = parent_dir # Stay here
-            results_dir = os.path.join(root_context, 'results')
             dest_path = img_path # No move needed
+            return dest_path, root_context
         else:
             # Normal case
             try:
                 os.makedirs(imgs_dir, exist_ok=True)
-                os.makedirs(results_dir, exist_ok=True)
                 dest_path = os.path.join(imgs_dir, base_name)
                 
                 if img_path != dest_path:
@@ -53,11 +51,12 @@ class IOManager:
                 print(f"IO Error preparing structure for {img_path}: {e}")
                 return None, None
                 
-        return dest_path, results_dir
+        return dest_path, parent_dir
 
-    def generate_metadata(self, root_dir):
+    def generate_metadata(self, root_dir, metric=1.0):
         """
         Generates metadata.txt in the root directory listing all valid images in the 'imgs' subdirectory.
+        Format: filename, height, width, metric
         """
         if not root_dir:
             return
@@ -67,10 +66,26 @@ class IOManager:
             if os.path.exists(imgs_dir):
                 meta_path = os.path.join(root_dir, 'metadata.txt')
                 existing_files = sorted(os.listdir(imgs_dir))
-                valid_imgs = [f for f in existing_files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.bmp'))]
+                valid_imgs = [f for f in existing_files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.bmp', '.tiff'))]
+                
+                # Try to preserve existing metrics if possible? 
+                # For simplicity, we regenerate based on current run or standard scan.
+                # If we want to be smart, we could read the old file first.
+                
+                # Simple implementation: Write all found files with current metric (since this is usually run after processing a batch)
+                # However, recalculating H,W requires opening the image.
+                from PIL import Image
                 
                 with open(meta_path, 'w') as f:
                     for fname in valid_imgs:
-                        f.write(f"{fname}\n")
+                        img_full_path = os.path.join(imgs_dir, fname)
+                        try:
+                            # Open image lazily to get size
+                            with Image.open(img_full_path) as img:
+                                width, height = img.size
+                        except:
+                            width, height = 0, 0
+                            
+                        f.write(f"{fname}, {height}, {width}, {metric}\n")
         except Exception as e:
             print(f"Failed to generate metadata: {e}")

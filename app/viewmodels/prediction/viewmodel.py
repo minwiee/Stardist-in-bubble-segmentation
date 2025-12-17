@@ -180,7 +180,7 @@ class PredictionViewModel:
 
     def open_result_folder(self):
         if hasattr(self, 'last_input_context') and os.path.exists(self.last_input_context):
-            res_path = os.path.join(self.last_input_context, 'results')
+            res_path = self.last_input_context
             if os.path.exists(res_path):
                 os.startfile(res_path)
             else:

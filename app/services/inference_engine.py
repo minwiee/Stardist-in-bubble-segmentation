@@ -50,19 +50,19 @@ class InferenceEngine:
 
             try:
                 # A. Prepare Directory Structure
-                dest_path, results_dir = self.io.prepare_file_structure(img_path)
+                dest_path, root_dir = self.io.prepare_file_structure(img_path)
                 if not dest_path:
                     continue
                 
                 # Capture root dir for metadata (from the first valid item)
                 if root_dir_for_metadata is None:
-                    root_dir_for_metadata = os.path.dirname(results_dir)
+                    root_dir_for_metadata = root_dir
 
                 # B. Predict
                 labels, details, bubbles, _ = self.model_service.predict(dest_path, metric)
                 
                 # C. Save
-                self.saver.save_results(results_dir, img_name, labels, details, bubbles, metric)
+                self.saver.save_results(root_dir, img_name, labels, details, bubbles, metric)
                 
                 processed_count += 1
                 
@@ -71,7 +71,7 @@ class InferenceEngine:
 
         # 3. Finalize
         if processed_count > 0 and root_dir_for_metadata:
-             self.io.generate_metadata(root_dir_for_metadata)
+             self.io.generate_metadata(root_dir_for_metadata, metric=metric)
 
         if progress_callback:
              progress_callback(processed_count, processed_count, "Done!")

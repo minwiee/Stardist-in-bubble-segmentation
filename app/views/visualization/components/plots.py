@@ -22,6 +22,7 @@ class PlotsPanel(ttk.Frame):
         # Steppers
         self.stepper_rdc = None
         self.stepper_sd = None
+
         self.stepper = None # Active
         
         # Interaction state
@@ -35,14 +36,15 @@ class PlotsPanel(ttk.Frame):
 
     def update_visualization(self):
         # Determine Checkbox state
-        show_orig = self.vm.show_original.get()
+
         show_mask = self.vm.show_mask.get()
         show_res = self.vm.show_result.get()
+
         
         active_plots = []
         if show_res: active_plots.append('res')
+
         if show_mask: active_plots.append('mask')
-        if show_orig: active_plots.append('orig')
         
         # Cleanup
         if self.canvas:
@@ -64,6 +66,7 @@ class PlotsPanel(ttk.Frame):
         # Reset Steppers
         self.stepper_rdc = None
         self.stepper_sd = None
+
         self.mask_ax = None
         
         for i, plot_type in enumerate(active_plots):
@@ -71,12 +74,8 @@ class PlotsPanel(ttk.Frame):
             ax.set_xticks([])
             ax.set_yticks([])
             
-            if plot_type == 'orig':
-                if self.vm.current_original_img is not None:
-                    ax.imshow(self.vm.current_original_img, cmap='gray')
-                    ax.set_title("Original Image")
-                    
-            elif plot_type == 'mask':
+
+            if plot_type == 'mask':
                 self.mask_ax = ax
                 if self.vm.current_original_img is not None:
                     ax.imshow(self.vm.current_original_img, cmap='gray')
@@ -103,8 +102,6 @@ class PlotsPanel(ttk.Frame):
                      ax.set_title("StarDist")
                 
                 # Click event for Detail (Manual mask click)
-                # Note: Stepper also handles clicks. If stepper is active, it handles it.
-                # If no stepper (fallback to colored mask), we need manual handler.
                 if not self.stepper_sd:
                      self.figure.canvas.mpl_connect('button_press_event', self.on_mask_click)
 
@@ -126,8 +123,6 @@ class PlotsPanel(ttk.Frame):
         
         # Inject toolbar into control panel's frame
         if self.control_panel and self.control_panel.fr_toolbar:
-            # Clean up old toolbar from that frame if any? 
-            # Actually CustomToolbar packs itself into 'window' arg.
             for child in self.control_panel.fr_toolbar.winfo_children():
                 child.destroy()
                 
@@ -136,13 +131,17 @@ class PlotsPanel(ttk.Frame):
             self.toolbar.pack(side=tk.BOTTOM, fill=tk.X)
             
     def set_active_stepper(self, mode):
-        # "RDC" or "SD"
+        # "RDC", "SD", or "JS_RDC"
         if mode == "RDC":
             self.stepper = self.stepper_rdc
         elif mode == "SD":
             self.stepper = self.stepper_sd
+
         else:
             self.stepper = None
+            
+        if self.control_panel:
+            self.control_panel.update_states(self.stepper is not None)
             
         return self.stepper
 
