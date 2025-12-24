@@ -98,13 +98,6 @@ class VisualizationViewModel:
             
         if self.image_list:
             self.select_image(0)
-            
-
-
-    def get_rdc_bubbles(self):
-        return self.current_data['bubble_list_rdc']
-        
-
 
     # Fixing select_image to cache sd_list
     def select_image(self, idx):

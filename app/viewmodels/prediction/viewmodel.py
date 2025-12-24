@@ -2,8 +2,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import os
 import threading
+import cv2
+import numpy as np
+from PIL import Image, ImageTk
 from app.services.inference_engine import InferenceEngine
 from app.utils.validators import validate_directory_path, validate_metric
+from app.utils.preprocessor import generate_flat_frame, load_flat_frame
 
 class PredictionViewModel:
     def __init__(self, root):
@@ -36,6 +40,28 @@ class PredictionViewModel:
         
         self.last_result_root = None
         self.on_transfer_request = None
+        
+        # Preprocessing Options
+        # Flatfield
+        self.use_flatfield = tk.BooleanVar(value=False)
+        self.flatfield_ref_path = tk.StringVar(value="")
+        self.flat_source = tk.StringVar(value="load")  # "load" or "generate"
+        self.flat_gen_images = []  # List of image paths for generation
+        self.flat_gen_count = tk.StringVar(value="0 images selected")
+        self.flat_smooth_method = tk.StringVar(value="resize")  # "blur", "resize", "none"
+        self.flat_blur_kernel = tk.StringVar(value="151")
+        self.flat_shrink_size = tk.StringVar(value="30")
+        self.flat_gen_status = tk.StringVar(value="")
+        self.generated_flat = None  # Cached generated flat frame
+        
+        # DoG (Difference of Gaussians)
+        self.use_dog = tk.BooleanVar(value=False)
+        self.dog_sigma1 = tk.StringVar(value="2.0")
+        self.dog_sigma2 = tk.StringVar(value="20.0")
+        
+        # Lanczos Upscale
+        self.use_lanczos = tk.BooleanVar(value=False)
+        self.lanczos_scale = tk.IntVar(value=2)
 
     def select_sd_model(self):
         path = filedialog.askdirectory(title="Select StarDist Model Folder (e.g. data_mix_64_400)")
@@ -56,6 +82,130 @@ class PredictionViewModel:
     def _reset_model_status(self):
         self.model_status.set("Not Loaded (Changed)")
         self.models_are_loaded.set(False)
+
+    def select_flatfield_ref(self):
+        """Select flatfield reference image."""
+        path = filedialog.askopenfilename(
+            title="Select Flatfield Reference Image",
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp *.tif *.tiff")]
+        )
+        if path:
+            self.flatfield_ref_path.set(path)
+    
+    def select_flat_gen_images(self):
+        """Select multiple images for flat frame generation."""
+        paths = filedialog.askopenfilenames(
+            title="Select Images for Flat Generation (same illumination)",
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp *.tif *.tiff")]
+        )
+        if paths:
+            self.flat_gen_images = list(paths)
+            self.flat_gen_count.set(f"{len(paths)} images selected")
+            self.flat_gen_status.set("")
+            self.generated_flat = None
+    
+    def generate_flat_frame(self):
+        """Generate flat frame from selected images in background."""
+        if not self.flat_gen_images:
+            messagebox.showwarning("Warning", "Please select images first!")
+            return
+        
+        min_frames = 100
+        if len(self.flat_gen_images) < min_frames:
+            messagebox.showwarning("Warning", f"Need at least {min_frames} images for good flat generation!\n\nYou selected {len(self.flat_gen_images)} images.")
+            return
+        
+        self.flat_gen_status.set("Generating...")
+        
+        def _generate():
+            try:
+                smooth_method = self.flat_smooth_method.get()
+                blur_kernel = int(self.flat_blur_kernel.get() or 151)
+                shrink_factor = int(self.flat_shrink_size.get() or 30)
+                
+                def progress_cb(current, total):
+                    self.root.after(0, lambda: self.flat_gen_status.set(f"Loading {current}/{total}..."))
+                
+                flat = generate_flat_frame(
+                    self.flat_gen_images,
+                    smooth_method=smooth_method,
+                    blur_kernel=blur_kernel,
+                    shrink_factor=shrink_factor,
+                    progress_callback=progress_cb
+                )
+                
+                self.generated_flat = flat
+                self.root.after(0, lambda: self.flat_gen_status.set(f"✓ Generated ({flat.shape[1]}x{flat.shape[0]})"))
+            except Exception as ex:
+                err_msg = str(ex)
+                self.root.after(0, lambda m=err_msg: self.flat_gen_status.set(f"Error: {m[:30]}"))
+                self.root.after(0, lambda m=err_msg: messagebox.showerror("Generation Error", m))
+        
+        threading.Thread(target=_generate, daemon=True).start()
+    
+    def preview_flat_frame(self):
+        """Show preview of current flat frame."""
+        flat = None
+        
+        if self.flat_source.get() == "load":
+            path = self.flatfield_ref_path.get()
+            if path and os.path.exists(path):
+                flat = load_flat_frame(path)
+            else:
+                messagebox.showwarning("Warning", "Please select a flat reference image first!")
+                return
+        else:
+            if self.generated_flat is None:
+                messagebox.showwarning("Warning", "Please generate a flat frame first!")
+                return
+            flat = self.generated_flat
+        
+        # Show in new window
+        preview_win = tk.Toplevel(self.root)
+        preview_win.title("Flat Frame Preview")
+        preview_win.geometry("600x500")
+        
+        # Convert to display image
+        h, w = flat.shape
+        # Resize for display if too large
+        max_size = 500
+        scale = min(max_size / w, max_size / h, 1.0)
+        disp_w, disp_h = int(w * scale), int(h * scale)
+        disp_img = cv2.resize(flat, (disp_w, disp_h))
+        
+        pil_img = Image.fromarray(disp_img)
+        photo = ImageTk.PhotoImage(pil_img)
+        
+        lbl = tk.Label(preview_win, image=photo)
+        lbl.image = photo  # Keep reference
+        lbl.pack(expand=True)
+        
+        info = f"Size: {w}x{h} | Mean: {flat.mean():.1f} | Min: {flat.min()} | Max: {flat.max()}"
+        tk.Label(preview_win, text=info).pack(pady=5)
+    
+    def get_preprocessing_config(self):
+        """Build preprocessing config dict from UI state."""
+        # Determine flat frame to use
+        flat_frame = None
+        flat_path = None
+        
+        if self.use_flatfield.get():
+            if self.flat_source.get() == "load":
+                flat_path = self.flatfield_ref_path.get()
+            elif self.generated_flat is not None:
+                flat_frame = self.generated_flat
+        
+        config = {
+            'use_flatfield': self.use_flatfield.get(),
+            'flatfield_ref_path': flat_path,
+            'flat_frame': flat_frame,  # Direct array if generated
+            'use_dog': self.use_dog.get(),
+            'dog_sigma1': float(self.dog_sigma1.get() or 2.0),
+            'dog_sigma2': float(self.dog_sigma2.get() or 20.0),
+            'use_lanczos': self.use_lanczos.get(),
+            'lanczos_scale': self.lanczos_scale.get() if self.use_lanczos.get() else 1,
+        }
+        return config
 
     def select_input(self):
         mode = self.input_mode.get()
@@ -139,6 +289,17 @@ class PredictionViewModel:
             messagebox.showwarning("Models Required", "Please load models first.")
             return
 
+        # 4. Validate Preprocessing Options
+        if self.use_flatfield.get():
+            if self.flat_source.get() == "load":
+                if not self.flatfield_ref_path.get():
+                    messagebox.showwarning("Flatfield Error", "Flatfield correction is enabled but no reference image is selected.\n\nPlease select a flatfield reference image or disable the option.")
+                    return
+            else:  # generate mode
+                if self.generated_flat is None:
+                    messagebox.showwarning("Flatfield Error", "Flatfield correction is enabled but flat frame has not been generated.\n\nPlease generate a flat frame first or switch to load mode.")
+                    return
+
         # Start Batch Processing
         self.is_processing.set(True)
         self.progress_value.set(0)
@@ -153,7 +314,10 @@ class PredictionViewModel:
                          self.progress_value.set(percent)
                 self.root.after(0, _ui_update)
 
-            count, root_dir = self.engine.process_batch(input_data, metric_val, _progress)
+            count, root_dir = self.engine.process_batch(
+                input_data, metric_val, _progress, 
+                preprocessing_config=self.get_preprocessing_config()
+            )
             
             def _finish():
                 self.is_processing.set(False)

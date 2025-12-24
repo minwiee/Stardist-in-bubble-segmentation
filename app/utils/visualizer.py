@@ -103,26 +103,3 @@ class Visualizer:
             points.append([bg_row, bg_col])
             
         return np.array(points)
-
-    @staticmethod
-    def load_and_visualize(img_path, csv_path, metric_val=1.0):
-        """
-        Loads image and CSV, reconstructs shapes, and launches BubbleStepper (Standalone).
-        """
-        try:
-            img = np.array(Image.open(img_path).convert('L'))
-            visual_items = Visualizer.get_visual_items(img_path, csv_path)
-            
-            if not visual_items:
-                return False, "No items found in CSV."
-
-            # Launch Viewer in new window (Blocking Main Thread)
-            fig, ax = plt.subplots(figsize=(10, 10))
-            ax.imshow(img, cmap='gray')
-            ax.set_title(f"Re-visualization: {os.path.basename(img_path)}")
-            
-            stepper = BubbleStepper(ax, visual_items)
-            return True, "Visualization closed."
-            
-        except Exception as e:
-            return False, f"Error visualizing: {e}"

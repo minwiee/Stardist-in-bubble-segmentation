@@ -6,8 +6,12 @@ class StatsCalculator:
         """Calculates image size and basic breakdown stats"""
         if img is None:
             return {'size': "N/A", 'area_px': 0}
-            
-        h, w = img.shape
+        
+        # Handle both 2D (grayscale) and 3D (color) images
+        if img.ndim == 3:
+            h, w, _ = img.shape
+        else:
+            h, w = img.shape
         img_area_px = h * w
         
         total_bub_mm = 0.0

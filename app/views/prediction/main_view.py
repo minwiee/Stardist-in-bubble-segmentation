@@ -4,6 +4,7 @@ from app.viewmodels.prediction import PredictionViewModel
 
 from .components.model_config import ModelConfigPanel
 from .components.input_settings import InputSettingsPanel
+from .components.preprocessing_panel import PreprocessingPanel
 from .components.execution_panel import ExecutionPanel
 
 class PredictionView(tk.Frame):
@@ -23,7 +24,11 @@ class PredictionView(tk.Frame):
         self.panel_input = InputSettingsPanel(self, self.vm)
         self.panel_input.pack(fill=tk.X, pady=10, padx=10)
 
-        # 3. Execution
+        # 3. Preprocessing Options
+        self.panel_preproc = PreprocessingPanel(self, self.vm)
+        self.panel_preproc.pack(fill=tk.X, pady=10, padx=10)
+
+        # 4. Execution
         self.panel_exec = ExecutionPanel(self, self.vm)
         self.panel_exec.pack(fill=tk.X, pady=10, padx=10)
 
@@ -48,4 +53,5 @@ class PredictionView(tk.Frame):
         
         self.panel_model.update_state(is_busy)
         self.panel_input.update_state(is_busy)
+        self.panel_preproc.update_state(is_busy)
         self.panel_exec.update_state(is_busy)

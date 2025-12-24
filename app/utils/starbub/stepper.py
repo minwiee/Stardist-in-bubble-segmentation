@@ -14,11 +14,57 @@ class BubbleStepper:
         self.artists = [] 
         self.detail_fig = None
         
+        # Store original view limits for zoom detection
+        self.original_xlim = None
+        self.original_ylim = None
+        self.is_zoomed = False
+        
         # Connect key press event for keyboard navigation
         self.ax.figure.canvas.mpl_connect('key_press_event', self.on_key)
         self.ax.figure.canvas.mpl_connect('button_press_event', self.on_click)
+        
+        # Connect to view limit changes for zoom detection
+        self.ax.callbacks.connect('xlim_changed', self._on_view_changed)
+        self.ax.callbacks.connect('ylim_changed', self._on_view_changed)
+        
+        # Capture original limits after first draw
+        self.ax.figure.canvas.mpl_connect('draw_event', self._capture_original_limits)
 
         print("Interactive Mode: Press Right/Next to draw bubble, Left/Prev to undo. Click on bubble to view detail with rays.")
+    
+    def _capture_original_limits(self, event):
+        """Capture original view limits on first draw."""
+        if self.original_xlim is None:
+            self.original_xlim = self.ax.get_xlim()
+            self.original_ylim = self.ax.get_ylim()
+    
+    def _on_view_changed(self, ax):
+        """Detect if view is zoomed and update clip_on accordingly."""
+        if self.original_xlim is None or self.original_ylim is None:
+            return
+            
+        current_xlim = self.ax.get_xlim()
+        current_ylim = self.ax.get_ylim()
+        
+        # Check if limits have changed significantly (zoomed in)
+        tolerance = 1e-3
+        xlim_changed = (abs(current_xlim[0] - self.original_xlim[0]) > tolerance or 
+                        abs(current_xlim[1] - self.original_xlim[1]) > tolerance)
+        ylim_changed = (abs(current_ylim[0] - self.original_ylim[0]) > tolerance or 
+                        abs(current_ylim[1] - self.original_ylim[1]) > tolerance)
+        
+        is_now_zoomed = xlim_changed or ylim_changed
+        
+        # Only update if zoom state changed
+        if is_now_zoomed != self.is_zoomed:
+            self.is_zoomed = is_now_zoomed
+            self._update_all_clip_on(self.is_zoomed)
+    
+    def _update_all_clip_on(self, clip_on):
+        """Update clip_on property for all drawn artists."""
+        for group in self.artists:
+            for art in group:
+                art.set_clip_on(clip_on)
         
     def next(self, event=None):
         if self.current_idx < len(self.visual_items) - 1:

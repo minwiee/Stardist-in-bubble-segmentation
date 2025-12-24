@@ -58,16 +58,18 @@ def main():
         apply_settings(root, style)
     except:
         pass
-        
-    # Center window (Initial only)
-    # We do this logic manually once
-    width = AppConfig.WINDOW_WIDTH
-    height = AppConfig.WINDOW_HEIGHT
+    
+    # Set minimum window size and fixed width
+    fixed_width = AppConfig.WINDOW_WIDTH  # Fixed width from config
+    root.minsize(fixed_width, 400)
+    
+    # Position window: center horizontally, 60px from top
+    root.update_idletasks()
     screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    x = (screen_width - width) // 2
-    y = (screen_height - height) // 2
-    root.geometry(f"{width}x{height}+{x}+{y}")
+    win_height = root.winfo_height()
+    x = (screen_width - fixed_width) // 2
+    y = 40  
+    root.geometry(f"{fixed_width}x{win_height}+{x}+{y}")
     
     try:
         # Dependency Injection

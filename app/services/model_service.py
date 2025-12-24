@@ -5,6 +5,7 @@ from PIL import Image
 from stardist.models import StarDist2D
 from csbdeep.utils import normalize
 from app.utils.starbub import HiddenReco
+from app.utils.preprocessor import scale_stardist_results
 
 from app.utils.json_collision import resolve_collisions
 
@@ -58,12 +59,7 @@ class ModelService:
 
     def predict(self, img_path, metric):
         """
-        Runs prediction on a single image.
-        Returns:
-             labels: StarDist label array
-             details: StarDist details dict
-             Bubbles: HiddenReco Bubbles object
-             img_name: Basename of image without extension
+        Runs prediction on a single image (legacy method).
         """
         if not self.models_loaded:
             raise Exception("Models not loaded")
@@ -76,8 +72,49 @@ class ModelService:
         
         labels, details = self.modelSD.predict_instances(X, verbose=False)
         
-
         # ----------------------------------------
         Bubbles = HiddenReco(labels, metric, model=self.modelRDC)
         
         return labels, details, Bubbles, img_name
+
+    def predict_from_array(self, img_array, metric, scale_factor=1):
+        """
+        Runs prediction on preprocessed image array.
+        Scales results back to original size BEFORE RDC.
+        
+        Args:
+            img_array: Preprocessed grayscale image (numpy array)
+            metric: Pixel to mm conversion
+            scale_factor: Lanczos scale factor (1 = no scaling)
+        
+        Returns:
+            labels: StarDist labels (original size)
+            details: StarDist details (original coordinates)
+            Bubbles: HiddenReco result
+        """
+        if not self.models_loaded:
+            raise Exception("Models not loaded")
+        
+        # Debug: Log input shape
+        print(f"[DEBUG] predict_from_array: input shape = {img_array.shape}, scale_factor = {scale_factor}")
+        
+        # Normalize for StarDist
+        X = normalize(img_array if img_array.ndim == 2 else img_array[..., 0], 1, 99.8, axis=(0, 1))
+        
+        # StarDist prediction (at possibly upscaled resolution)
+        labels, details = self.modelSD.predict_instances(X, verbose=False)
+        
+        # Debug: Log StarDist output
+        print(f"[DEBUG] StarDist output: labels shape = {labels.shape}, num objects = {labels.max()}")
+        
+        # Scale results back to original size BEFORE RDC
+        if scale_factor > 1:
+            print(f"[DEBUG] Scaling back by factor {scale_factor}...")
+            labels, details = scale_stardist_results(labels, details, scale_factor)
+            print(f"[DEBUG] After scaling: labels shape = {labels.shape}")
+        
+        # RDC on scaled-back labels
+        Bubbles = HiddenReco(labels, metric, model=self.modelRDC)
+        
+        return labels, details, Bubbles
+
