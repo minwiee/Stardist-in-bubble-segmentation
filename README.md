@@ -68,8 +68,3 @@ You can visualize results in two ways:
 -   **Notebook:** Open **`prediction-demo.ipynb`** for a step-by-step walkthrough.
 -   **Script:** Run `python demo.py` to launch an interactive viewer.
     -   **Controls:** Use `Next`/`Prev` buttons to toggle between detected bubbles. Click on a bubble to view its radial profile.
-
-## Data Management
-
-The `data/` folder contains extensive datasets (>150k files) and is excluded from this repository.
-> **Note:** Please refer to the `Examples/` folder for sample data or generate your own using the provided notebooks.
