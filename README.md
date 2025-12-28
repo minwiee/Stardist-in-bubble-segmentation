@@ -1,101 +1,73 @@
-# Stardist-in-bubble-segmentation
-🗓 Tuần 1 (1/10 – 6/10):
+# Detection of Overlapping Bubbles in Industrial Imagery
 
-Tìm hiểu bài toán segmentation và ứng dụng StarDist.
+This project investigates the application of **StarDist** for identifying overlapping objects in **industrial bubble images** and employing **Radial Distance Correction (RDC)** for shape reconstruction.
 
-Đọc paper “Bubble identification from images with machine learning 
-methods ” (Hessenkemper).
+## Project Description
 
-Cài đặt môi trường (Python, TensorFlow, StarDist, Jupyter).
+In industrial multiphase flow imaging, bubbles often overlap, making accurate segmentation and property analysis (size, volume) challenging. This research proposes a two-stage approach:
+1.  **Detection & Segmentation:** Using the **StarDist** (Star-convex Object Detection) CNN model to detect and segment individual bubble instances, effectively handling dense and overlapping conditions.
+2.  **Shape Reconstruction:** Applying the **Radial Distance Correction (RDC)** method to reconstruct the complete shapes of occluded bubbles based on their visible segments predicted by StarDist.
 
-Tạo repository GitHub và setup project structure.
+## Project Structure
 
-🗓 Tuần 2 (7/10 – 13/10):
+### Core Notebooks
+- **`startdist-data-preprocess.ipynb`**: **Step 1.** Preprocesses raw frame images (Flatfield correction, DoG, Lanczos upscaling) to prepare training data for StarDist.
+- **`stardist-train.ipynb`**: **Step 2.** Trains the StarDist model to detect overlapping bubbles using the preprocessed data.
+- **`rdc-data-gen.ipynb`**: **Step 3.** Generates **synthetic training data** for the RDC model.
+  - Simulates overlapping bubble scenarios.
+  - Converts ground truth masks to Radial Distance (RD) objects.
+  - Output: `X_train.npy`, `Y_train.npy` (Inputs for RDC training).
+- **`rdc-train.ipynb`**: **Step 4.** Trains the RDC Neural Network.
+  - Input: Occluded radial distances.
+  - Output: Corrected "ground truth" radial distances.
+- **`prediction-demo.ipynb`**: **Step 5.** Interactive notebook demonstrating the full pipeline (StarDist prediction + RDC reconstruction) on sample images.
 
-Thu thập yêu cầu hệ thống và xác định mục tiêu cụ thể.
+### Data
+- **`data/`**: Directory containing industrial and synthetic datasets. (Excluded from version control).
+- **`Examples/`**: Sample images for testing the demo scripts.
+- **`Models/`**: Directory where trained StarDist and RDC models are saved.
 
-Tìm hoặc chuẩn bị dataset.
+## Prerequisites & Compatibility
 
-Viết tài liệu mô tả yêu cầu (requirements.md).
+*   **Python Version:** Python 3.7+
+*   **Hardware:** CUDA-compatible GPU recommended for training and faster inference.
 
-🗓 Tuần 3 (14/10 – 20/10):
+## Installation
 
-Thiết kế pipeline huấn luyện: chia train/test, augment data.
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repo-url>
+    cd CodeRepo
+    ```
 
-Xác định kiến trúc StarDist (2D hoặc 3D, số tia n_rays, patch size…).
+2.  **Install Dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+    *Key libraries: `stardist`, `tensorflow`, `numpy`, `pandas`, `scikit-image`, `matplotlib`, `opencv-python`.*
 
-Thiết kế kiến trúc hệ thống và UI (nếu có giao diện).
+## Usage Workflow
 
-🗓 Tuần 4 (21/10 – 27/10):
+Follow these steps to reproduce the full pipeline:
 
-Cài đặt và thử huấn luyện mô hình StarDist trên subset nhỏ của dataset.
+### 1. Data Preprocessing
+Run **`startdist-data-preprocess.ipynb`** to apply image enhancement techniques (Flatfield, DoG) to your raw dataset.
 
-Debug, kiểm tra input-output của mô hình.
+### 2. Train StarDist
+Run **`stardist-train.ipynb`** to train the detection model on the preprocessed images.
 
-Viết script huấn luyện train_stardist.py.
+### 3. Generate RDC Data
+Run **`rdc-data-gen.ipynb`** to create a synthetic dataset of overlapping bubbles. This uses ground truth data to learn how to correct deformed shapes.
+-   *Note: Output is configured to Millimeters (mm).*
 
-🗓 Tuần 5 (28/10 – 3/11):
+### 4. Train RDC Model
+Run **`rdc-train.ipynb`** to train the dense neural network using the synthetic data generated in step 3.
 
-Huấn luyện mô hình hoàn chỉnh với toàn bộ dataset.
+### 5. Inference & Demo
+You can visualize results in two ways:
+-   **Notebook:** Open **`prediction-demo.ipynb`** for a step-by-step walkthrough.
+-   **Script:** Run `python demo.py` to launch an interactive viewer.
+    -   **Controls:** Use `Next`/`Prev` buttons to toggle between detected bubbles. Click on a bubble to view its radial profile.
 
-Theo dõi loss, IoU, Dice coefficient.
 
-Ghi lại kết quả vào file log và notebook.
-
-Đánh giá sơ bộ kết quả dự đoán (visualize mask).
-
-🗓 Tuần 6 (4/11 – 10/11):
-
-Phân tích lỗi (error analysis).
-
-Điều chỉnh hyperparameter (learning rate, batch size, n_rays).
-
-So sánh kết quả sau khi tối ưu.
-
-Viết tài liệu “Model Evaluation Report”.
-
-🗓 Tuần 7 (11/11 – 17/11):
-
-Bắt đầu phát triển ứng dụng web.
-
-Thiết kế UI upload ảnh và hiển thị kết quả segmentation.
-
-Kết nối mô hình StarDist với giao diện inference.
-
-🗓 Tuần 8 (18/11 – 24/11):
-
-Hoàn thiện giao diện: hiển thị ảnh gốc + ảnh mask.
-
-Thử nghiệm pipeline end-to-end: upload → dự đoán → hiển thị.
-
-Viết code tối ưu tốc độ dự đoán (GPU / batch inference).
-
-🗓 Tuần 9 (25/11 – 1/12):
-
-Kiểm thử toàn hệ thống (unit test + integration test).
-
-Kiểm tra performance (FPS, latency).
-
-Tối ưu code, làm sạch repo.
-
-🗓 Tuần 10 (2/12 – 8/12):
-
-Viết tài liệu hướng dẫn sử dụng (README.md, user manual).
-
-Chuẩn bị slide báo cáo.
-
-Ghi lại kết quả thực nghiệm, biểu đồ đánh giá.
-
-🗓 Tuần 11 (9/12 – 15/12):
-
-Rà soát toàn bộ project, hoàn thiện phần trình bày và code.
-
-Ghi nhận đóng góp nhóm.
-
-🗓 Tuần 12 (16/12 – 31/12):
-
-Chuẩn bị demo, video trình chiếu kết quả.
-
-Viết báo cáo tổng kết (report.pdf).
-
-Nộp project và thuyết trình.
+    TEST PUSH
